@@ -6,27 +6,15 @@ import os
 
 class SnapshotAnalysis:
     def __init__(self, image=None, model_path=None):
-        """
-        Inicializuje objekt pro analýzu snapshotu a AI detekci.
-        :param image: Obraz (numpy array). Pokud není zadán, metoda `load_image()` musí být zavolána.
-        :param model_path: Cesta k předtrénovanému modelu AI pro analýzu (volitelné).
-        """
+        #Initialization
         self.image = image
         self.model = self.load_model(model_path) if model_path else None
 
     def load_image(self, image_path):
-        """
-        Načte obrázek ze souboru.
-        :param image_path: Cesta k souboru obrázku
-        """
         self.image = cv2.imread(image_path)
 
     def load_model(self, model_path):
-        """
-        Načte předtrénovaný model pro AI analýzu.
-        :param model_path: Cesta k souboru modelu
-        :return: Načtený model
-        """
+        #If any are available
         try:
             model = tf.keras.models.load_model(model_path)
             print("Model loaded successfully.")
@@ -36,10 +24,6 @@ class SnapshotAnalysis:
             return None
 
     def analyze_edges(self):
-        """
-        Analýza hran pomocí Canny detektoru.
-        :return: Vrací snímek s detekovanými hranami.
-        """
         if self.image is None:
             raise ValueError("Image not loaded. Please load an image first.")
 
@@ -49,10 +33,6 @@ class SnapshotAnalysis:
         return edges
 
     def analyze_contours(self):
-        """
-        Analýza kontur na obrázku.
-        :return: Snímek s nakreslenými konturami.
-        """
         if self.image is None:
             raise ValueError("Image not loaded. Please load an image first.")
 
@@ -64,45 +44,45 @@ class SnapshotAnalysis:
         return self.image
 
     def ai_inference(self):
-        """
-        Aplikuje AI model na obrázek pro detekci vad.
-        :return: Predikce AI modelu (např. 0 = bez vady, 1 = vada).
-        """
+        #If any are available
         if self.image is None:
             raise ValueError("Image not loaded. Please load an image first.")
 
         if self.model is None:
             raise ValueError("No AI model loaded. Please load a model first.")
 
-        # Předzpracování obrázku pro model
-        image_resized = cv2.resize(self.image, (224, 224))  # Změna velikosti pro model
-        image_normalized = image_resized / 255.0  # Normalizace (pokud model trénován na normalizovaných datech)
+        #Image preporcessing
+        image_resized = cv2.resize(self.image, (224, 224))
+        image_normalized = image_resized / 255.0
 
-        # Predikce
+        #Prediction
         prediction = self.model.predict(np.expand_dims(image_normalized, axis=0))
 
-        # Pokud model vrátí 1 (vada), pokud 0 (bez vady)
+        #Prediction output
         if prediction[0] > 0.5:
             print("Defect detected!")
-            return 1  # Vada
+            return 1
         else:
             print("No defect detected.")
-            return 0  # Bez vady
+            return 0
 
-    def save_result(self, result_image, save_path="output.jpg"):
-        """
-        Uloží výsledek analýzy na disk.
-        :param result_image: Obraz, který bude uložen
-        :param save_path: Cesta k souboru pro uložení
-        """
+    def save_result(self, result_image, original_image_path, suffix):
+        #Saves the analysis result to the Snapshot_an folder with an added suffix for the specific analysis.
+
+        output_dir = "Snapshot_an"
+        os.makedirs(output_dir, exist_ok=True)
+
+        base_name = os.path.basename(original_image_path)
+        name_without_extension = os.path.splitext(base_name)[0]
+
+        new_file_name = f"{name_without_extension}{suffix}.jpg"
+        save_path = os.path.join(output_dir, new_file_name)
+
         cv2.imwrite(save_path, result_image)
         print(f"Result saved to {save_path}")
 
     def display_image(self, image_to_display=None):
-        """
-        Zobrazí obrázek pomocí OpenCV.
-        :param image_to_display: Obraz k zobrazení, pokud není, použije se originální obrázek
-        """
+
         if image_to_display is None:
             image_to_display = self.image
 
@@ -110,7 +90,6 @@ class SnapshotAnalysis:
             print("No image to display")
             return
 
-        # Zobrazí obrázek v okně
         cv2.imshow("Image", image_to_display)
         cv2.waitKey(0)
         cv2.destroyAllWindows()

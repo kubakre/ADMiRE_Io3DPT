@@ -3,7 +3,7 @@ import json
 import time
 import cv2
 import os
-import datetime
+from datetime import datetime
 
 from mock_printer import MockPrinter
 from camera import RealSenseCamera
@@ -54,7 +54,7 @@ def read_printer_status():
 
 def get_layer():
     try:
-        #Must use Timelapse plugin in Klipper
+        #Must use Timelapse plugin in Klipper or find a different way
         response = requests.get(f"{URL}/printer/objects/query?objects={{'timelapse': null}}")
         response.raise_for_status()
 
@@ -74,50 +74,37 @@ def get_camera_snapshot():
         return None
 
 def get_latest_snapshot(directory="Snapshot"):
-    """
-    Finds the most recent snapshot in the directory based on the filename timestamp.
-    :param directory: Directory to search for snapshots.
-    :return: Path to the latest snapshot or None if no snapshot is found.
-    """
-    # Seznam všech souborů ve složce
+    #Finds the most recent snapshot in the directory based on the filename timestamp.
     snapshot_files = [f for f in os.listdir(directory) if f.startswith("snapshot_") and f.endswith(".jpg")]
 
     if not snapshot_files:
         print("No snapshots found in the directory.")
         return None
 
-    # Seřadíme soubory podle data (od nejnovějšího)
     snapshot_files.sort(key=lambda f: datetime.strptime(f, "snapshot_%Y%m%d_%H%M%S_%f.jpg"), reverse=True)
 
-    # Vrátíme cestu k nejnovějšímu snapshotu
     latest_snapshot = os.path.join(directory, snapshot_files[0])
     print(f"Latest snapshot found: {latest_snapshot}")
 
     return latest_snapshot
 
 def analyze_snapshot():
-    # Získání nejnovějšího snapshotu ve složce "Snapshot"
     latest_snapshot = get_latest_snapshot("Snapshot")
 
     if latest_snapshot is not None:
-        # Inicializace třídy pro analýzu snapshotu
         analyzer = SnapshotAnalysis(image=None)
-        analyzer.load_image(latest_snapshot)  # Načteme obrázek do analýzy
+        analyzer.load_image(latest_snapshot)
 
-        # Analýza hran
         edges = analyzer.analyze_edges()
-        analyzer.save_result(edges, save_path="edges_snapshot.jpg")
+        analyzer.save_result(edges, latest_snapshot, suffix="_ed")
 
-        # Analýza kontur
         contours = analyzer.analyze_contours()
-        analyzer.save_result(contours, save_path="contours_snapshot.jpg")
+        analyzer.save_result(contours, latest_snapshot, suffix="_cont")
 
-        # AI analýza (detekce vad tisku)
-        result = analyzer.ai_inference()
-        print(f"AI prediction result: {result}")
+        #AI analysis (need to decide whether find some model or train my own)
+        #result = analyzer.ai_inference()
+        #analyzer.save_result(result, latest_snapshot, suffix="_ai")
 
-        # Zobrazení výsledků
-        analyzer.display_image(edges)  # Zobrazení hran
     else:
         print("No snapshot found to analyze.")
 
@@ -130,7 +117,7 @@ if __name__ == "__main__":
     #check if the area is clear? (NN)
     #check the other values
     #Then proceed for the first layer
-    current_layer = get_layer()
+    current_layer = 1 #get_layer()
     if current_layer == 1:
         print("First layer check")
         printer.stop_print()
