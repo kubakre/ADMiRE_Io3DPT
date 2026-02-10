@@ -2,10 +2,13 @@ import requests
 import json
 import time
 import cv2
+import os
+import datetime
 
 from mock_printer import MockPrinter
 from camera import RealSenseCamera
 from command_printer import PrinterControl
+from image_analysis import SnapshotAnalysis
 
 #Setting up the printer
 IP_ADRESS = "localhost" #When it is running on your pc
@@ -70,6 +73,54 @@ def get_camera_snapshot():
         print("Snapshot error:", e)
         return None
 
+def get_latest_snapshot(directory="Snapshot"):
+    """
+    Finds the most recent snapshot in the directory based on the filename timestamp.
+    :param directory: Directory to search for snapshots.
+    :return: Path to the latest snapshot or None if no snapshot is found.
+    """
+    # Seznam všech souborů ve složce
+    snapshot_files = [f for f in os.listdir(directory) if f.startswith("snapshot_") and f.endswith(".jpg")]
+
+    if not snapshot_files:
+        print("No snapshots found in the directory.")
+        return None
+
+    # Seřadíme soubory podle data (od nejnovějšího)
+    snapshot_files.sort(key=lambda f: datetime.strptime(f, "snapshot_%Y%m%d_%H%M%S_%f.jpg"), reverse=True)
+
+    # Vrátíme cestu k nejnovějšímu snapshotu
+    latest_snapshot = os.path.join(directory, snapshot_files[0])
+    print(f"Latest snapshot found: {latest_snapshot}")
+
+    return latest_snapshot
+
+def analyze_snapshot():
+    # Získání nejnovějšího snapshotu ve složce "Snapshot"
+    latest_snapshot = get_latest_snapshot("Snapshot")
+
+    if latest_snapshot is not None:
+        # Inicializace třídy pro analýzu snapshotu
+        analyzer = SnapshotAnalysis(image=None)
+        analyzer.load_image(latest_snapshot)  # Načteme obrázek do analýzy
+
+        # Analýza hran
+        edges = analyzer.analyze_edges()
+        analyzer.save_result(edges, save_path="edges_snapshot.jpg")
+
+        # Analýza kontur
+        contours = analyzer.analyze_contours()
+        analyzer.save_result(contours, save_path="contours_snapshot.jpg")
+
+        # AI analýza (detekce vad tisku)
+        result = analyzer.ai_inference()
+        print(f"AI prediction result: {result}")
+
+        # Zobrazení výsledků
+        analyzer.display_image(edges)  # Zobrazení hran
+    else:
+        print("No snapshot found to analyze.")
+
 if __name__ == "__main__":
     #before the print starts (head is home)
     #printer.move_toolhead() #set the home coordinates
@@ -86,10 +137,11 @@ if __name__ == "__main__":
         #printer.move_toolhead() #set the home coordinates
         path = get_camera_snapshot()
         print("Snapshot saved:", path, flush=True)
+        analyze_snapshot()
 
     #check (head home, snapshot, analyze)
     #LLM or NN?
-
+    print("Continuing printing...", flush=True)
     while True:
         s = read_printer_status()
         print(s)

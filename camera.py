@@ -26,9 +26,7 @@ class RealSenseCamera:
             self.pipeline_started = True
 
     def get_snapshot(self):
-        """
-        Returns a numpy array (image) or None
-        """
+        #Returns a numpy array (image) or None
         try:
             if not self.pipeline_started:
                 self.start()
@@ -45,10 +43,7 @@ class RealSenseCamera:
             return None
 
     def save_snapshot(self, base_dir="Snapshot"):
-        """
-        Saves snapshot to disk.
-        Returns file path or None.
-        """
+        #Saves snapshot to disk.
         image = self.get_snapshot()
         if image is None:
             return None
