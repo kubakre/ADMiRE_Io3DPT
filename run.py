@@ -3,12 +3,20 @@ import json
 import time
 import cv2
 import os
-from datetime import datetime
+import base64
 
-from mock_printer import MockPrinter
+from datetime import datetime
 from camera import RealSenseCamera
 from command_printer import PrinterControl
 from image_analysis import SnapshotAnalysis
+from openai import OpenAI
+
+# Set your OpenAI API key
+OPENAI_API_KEY = "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"  # enter your openai api key here
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
+#prompt
+prompt = "Please analyze the attached photo of the 3D print. Is the print process proceeding as expected? If not, could you provide suggestions on the adjustments needed? Specifically, mention any parameters that might need modification to ensure a successful print."
 
 #Setting up the printer
 IP_ADRESS = "localhost" #When it is running on your pc
@@ -17,6 +25,11 @@ URL = f"http://{IP_ADRESS}:{PORT}"
 
 camera = RealSenseCamera()
 printer = PrinterControl(URL)
+
+client = OpenAI(
+    # This is the default and can be omitted
+    api_key=os.environ.get("OPENAI_API_KEY"),
+)
 
 def get_printer_state():
     r = requests.get(f"{URL}/printer/info", timeout=3)
@@ -74,7 +87,7 @@ def get_camera_snapshot():
         return None
 
 def get_latest_snapshot(directory="Snapshot"):
-    #Finds the most recent snapshot in the directory based on the filename timestamp.
+    # Finds the most recent snapshot in the directory based on the filename timestamp.
     snapshot_files = [f for f in os.listdir(directory) if f.startswith("snapshot_") and f.endswith(".jpg")]
 
     if not snapshot_files:
@@ -95,16 +108,28 @@ def analyze_snapshot():
         analyzer = SnapshotAnalysis(image=None)
         analyzer.load_image(latest_snapshot)
 
+        # Analyze edges and save the result
         edges = analyzer.analyze_edges()
         analyzer.save_result(edges, latest_snapshot, suffix="_ed")
 
-        contours = analyzer.analyze_contours()
-        analyzer.save_result(contours, latest_snapshot, suffix="_cont")
+        # Now, instead of trying to open the processed edges image,
+        # we will open the raw, latest snapshot
+        with open(latest_snapshot, "rb") as image_file:  # Open the latest snapshot (raw image)
+            b64_image = base64.b64encode(image_file.read()).decode("utf-8")
 
-        #AI analysis (need to decide whether find some model or train my own)
-        #result = analyzer.ai_inference()
-        #analyzer.save_result(result, latest_snapshot, suffix="_ai")
-
+        response = client.responses.create(
+            model="gpt-5.2",
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": prompt},
+                        {"type": "input_image", "image_url": f"data:image/png;base64,{b64_image}"},
+                    ],
+                }
+            ],
+        )
+        print(response.output_text)
     else:
         print("No snapshot found to analyze.")
 
@@ -114,22 +139,23 @@ if __name__ == "__main__":
     print("Printer:", get_printer_state())
     path=get_camera_snapshot()
     print("Snapshot saved:", path, flush=True)
+    analyze_snapshot()
     #check if the area is clear? (NN)
     #check the other values
     #Then proceed for the first layer
-    current_layer = 1 #get_layer()
-    if current_layer == 1:
-        print("First layer check")
-        printer.stop_print()
-        #printer.move_toolhead() #set the home coordinates
-        path = get_camera_snapshot()
-        print("Snapshot saved:", path, flush=True)
-        analyze_snapshot()
+    # current_layer = 1 #get_layer()
+    # if current_layer == 1:
+    #     print("First layer check")
+    #     printer.stop_print()
+    #     #printer.move_toolhead() #set the home coordinates
+    #     path = get_camera_snapshot()
+    #     print("Snapshot saved:", path, flush=True)
+    #     analyze_snapshot()
 
     #check (head home, snapshot, analyze)
     #LLM or NN?
-    print("Continuing printing...", flush=True)
-    while True:
-        s = read_printer_status()
-        print(s)
-        time.sleep(2)
+    # print("Continuing printing...", flush=True)
+    # while True:
+    #     s = read_printer_status()
+    #     print(s)
+    #     time.sleep(2)
