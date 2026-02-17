@@ -16,7 +16,13 @@ OPENAI_API_KEY = "sk-proj-TqyqNfAQNJ_j5BWrHbQRdn8Ur8aRZ1BNZd1lJb-1ozo1MIJcrDfpOm
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 #prompt
-prompt = "Please analyze the attached photo of the 3D print. Is the print process proceeding as expected? If not, could you provide suggestions on the adjustments needed? Specifically, mention any parameters that might need modification to ensure a successful print."
+def load_prompt(name):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base_dir, "prompts", name)
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+prompt = load_prompt("prompt.txt")
 
 #Setting up the printer
 IP_ADRESS = "localhost" #When it is running on your pc
