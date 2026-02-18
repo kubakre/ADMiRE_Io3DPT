@@ -163,41 +163,39 @@ def parse_ai_response(response_text):
         print("Error: AI did not return JSON.")
         return {"status": "UNKNOWN", "reason": response_text}
 
+def zero_layer_check(snapshot):
+    print("Starting pre-print check")
+    get_printer_state()
+    print(f"Printer state: {state}")
+    prompt_before = load_prompt("prompt_before_print.txt")
+    analyze_snapshot(snapshot, prompt_before)
+
+
+def first_layer_check(snapshot):
+    prompt_first = load_prompt("prompt_first_layer.txt")
+    analyze_snapshot(snapshot, prompt_first)
+    #if layer is not ok:
+    #...
+    #else ok continue
+    #print("Everything is fine, continue printing")
+    #printer.resume_print()
+
 if __name__ == "__main__":
-    total_layers = 200  # Celkový počet vrstev (simulace)
-    current_layer = 0  # Aktuální vrstva
-    milestones = [25, 50, 75]  # Kdy chceme kontrolovat (v %)
-    # 1. Kontrola před tiskem (Bed clear?)
-    print("Zahajuji kontrolu před tiskem...")
+    total_layers = 200  # Total number of layers (simulation)
+    current_layer = 0  # Current layer
+    milestones = [25, 50, 75]  # Multi-layer intervals
 
-    # DŮLEŽITÉ: Odsunout hlavu, aby nebránila výhledu
-    # printer.move_toolhead_to_maintenance() # Doporučuji implementovat/odkomentovat
 
-    test_file = "snapshot_20260211_123345_626856.jpg"
-    snapshot_path = get_test_snapshot_path(test_file)
+    test_file = "snapshot_20260211_123345_626856.jpg" #
 
-    #If camera connected
-    #snapshot_path = get_camera_snapshot()
-
-    if snapshot_path:
-        print(f"Snapshot uložen: {snapshot_path}")
-        prompt_before = load_prompt("prompt_before_print.txt")
-        result = analyze_snapshot(snapshot_path, prompt_before)
-
-        # Zde by měla být logika: Pokud AI řekne "FAIL" nebo "OBSTRUCTION", zastav tisk.
-        # if "STOP" in result:
-        #    printer.emergency_stop()
-        #    exit()
-
-    # 2. Kontrola stavu tiskárny
-    state = get_printer_state()
-    print(f"Stav tiskárny: {state}")
-
-    # ... Další logika pro první vrstvu ...
+    # First layer check
     current_layer = 1
     if current_layer == 1:
-        prompt_first = load_prompt("prompt_first_layer.txt")
-        analyze_snapshot(snapshot_path,prompt_first)
+        printer.pause_print()
+        #printer.move_toolhead() #head home
+        snapshot_path = get_test_snapshot_path(test_file)
+        #snapshot_path = get_camera_snapshot()
+        first_layer_check(snapshot_path)
         current_layer = 50
 
     # ... Další logika pro zbytek tisku ...
