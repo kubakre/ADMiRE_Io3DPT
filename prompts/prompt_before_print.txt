@@ -1,0 +1,31 @@
+Analyze the attached photo of a 3D printer build plate before printing.
+
+Determine whether the build plate is clean and ready for printing.
+
+You must return ONLY valid JSON.
+Do not include explanations.
+Return exact numeric values (no ranges).
+If no issue is detected, return empty array for detected_issues.
+
+Return this JSON structure:
+
+{
+  "bed_status": "ready | cleaning_required | critical_block",
+  "detected_issues": [
+    "plastic_residue",
+    "dust_particles",
+    "fingerprints",
+    "surface_damage",
+    "foreign_object"
+  ],
+  "coverage_percent": 0.0,
+  "severity_score": 0.0,
+  "recommended_action": "none | wipe_with_isopropyl | remove_object | manual_inspection",
+  "confidence_score": 0.0
+}
+
+Rules:
+- coverage_percent must represent approximate % of bed area affected.
+- severity_score must be between 0.0 and 1.0.
+- confidence_score must be between 0.0 and 1.0.
+- Output must be pure JSON.

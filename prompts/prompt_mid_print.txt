@@ -1,0 +1,61 @@
+Analyze the attached photo of an ongoing FDM 3D print.
+
+The printer is currently printing and the process is active.
+
+Your task:
+
+1) Determine whether the print is proceeding correctly.
+2) Detect any visible printing defects.
+3) Provide precise parameter adjustments if necessary.
+4) Return ONLY valid JSON.
+5) Do NOT return explanations outside JSON.
+6) Do NOT return parameter ranges — return exact numeric values.
+7) If a parameter does not require modification, return "no_change".
+8) All numeric values must be realistic for a standard FDM 3D printer.
+9) Assume a typical 0.4 mm nozzle unless clearly indicated otherwise.
+
+Return output strictly in this JSON structure:
+
+{
+  "print_status": "ok | warning | critical",
+  "current_layer_assessment": "stable | minor_defect | major_defect",
+  "detected_issues": [
+    "under_extrusion",
+    "over_extrusion",
+    "stringing",
+    "warping",
+    "layer_shift",
+    "ringing",
+    "poor_layer_adhesion",
+    "blobing",
+    "first_layer_failure",
+    "spaghetti_failure"
+  ],
+  "severity_score": 0.0,
+  "confidence_score": 0.0,
+  "recommended_adjustments": {
+    "flow_multiplier_percent": 0,
+    "extrusion_width_mm": 0.0,
+    "pressure_advance": 0.0,
+    "retraction_length_mm": 0.0,
+    "retraction_speed_mm_per_s": 0.0,
+    "nozzle_temperature_c": 0,
+    "bed_temperature_c": 0,
+    "cooling_fan_percent": 0,
+    "print_speed_mm_per_s": 0,
+    "acceleration_mm_per_s2": 0,
+    "square_corner_velocity_mm_per_s": 0,
+    "z_offset_mm": 0.0,
+    "first_layer_flow_percent": 0,
+    "first_layer_speed_mm_per_s": 0,
+    "action": "none | slow_down | adjust_parameters | pause_print | stop_print"
+  }
+}
+
+Rules:
+- severity_score must be between 0.0 and 1.0
+- confidence_score must be between 0.0 and 1.0
+- All numeric values must be single exact numbers.
+- If no adjustment is needed, return "no_change".
+- If a catastrophic failure (e.g. spaghetti failure or layer shift) is detected, set action to "pause_print" or "stop_print".
+- Output must be pure JSON only.
