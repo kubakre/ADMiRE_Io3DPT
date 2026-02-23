@@ -26,6 +26,7 @@ URL = f"http://{IP_ADDRESS}:{PORT}"
 camera = RealSenseCamera()
 printer = PrinterControl(URL)
 client = OpenAI(api_key=OPENAI_API_KEY)
+Baseline_printer_status = None
 
 def load_prompt(name):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -108,6 +109,8 @@ def analyze_snapshot(image_path, prompt_text):
         print("Error: There is no snapshot to analyze.")
         return
 
+    printer_status = read_printer_status()
+
     # This is for local analysis
     # try:
     #     analyzer = SnapshotAnalysis(image=None)
@@ -118,8 +121,21 @@ def analyze_snapshot(image_path, prompt_text):
     #     print(f"Error during CV analysis: {e}")
 
     # LLM analysis
-    print("I am sending it to LLM for analysis...")
     base64_image = encode_image(image_path)
+
+    structured_context = {
+        "printer_status": printer_status
+    }
+
+    combined_prompt = f"""
+        {prompt_text}
+
+        PRINTER TELEMETRY (JSON):
+        {json.dumps(structured_context, indent=2)}
+
+        Use both the image and the telemetry data to make your decision.
+        Return ONLY valid JSON.
+        """
 
     try:
         response = client.chat.completions.create(
@@ -128,7 +144,7 @@ def analyze_snapshot(image_path, prompt_text):
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": prompt_text},
+                        {"type": "text", "text": combined_prompt},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -164,27 +180,133 @@ def parse_ai_response(response_text):
         return {"status": "UNKNOWN", "reason": response_text}
 
 def zero_layer_check(snapshot):
+    global Baseline_printer_status
     print("Starting pre-print check")
-    get_printer_state()
+    current_status = read_printer_status()
+    if Baseline_printer_status is None:
+        Baseline_printer_status = current_status
+        print("Baseline printer status stored.")
+    else:
+        print("Baseline already exists. Not overwriting.")
+
+    print("Baseline status:")
+    print(json.dumps(Baseline_printer_status, indent=2))
+    state = get_printer_state()
     print(f"Printer state: {state}")
+
     prompt_before = load_prompt("prompt_before_print.txt")
-    analyze_snapshot(snapshot, prompt_before)
+    response_text = analyze_snapshot(snapshot, prompt_before)
+
+    if not response_text:
+        print("AI returned no response. Pausing print...")
+        printer.pause_print()
+        return False
+
+    ai_data = parse_ai_response(response_text)
+
+    required_keys = [
+        "bed_status",
+        "detected_issues",
+        "coverage_percent",
+        "severity_score",
+        "recommended_action",
+        "confidence_score"
+    ]
+
+    for key in required_keys:
+        if key not in ai_data:
+            print(f"Missing key in AI response: {key}")
+            printer.pause_print()
+            return False
+
+    print("\n--- Parsed AI JSON ---")
+    print(json.dumps(ai_data, indent=2))
+    print("-----------------------\n")
+
+    recommended_action = ai_data["recommended_action"]
+    confidence = ai_data["confidence_score"]
+
+    # This is safety logic, when AI is not really sure (change confidence as you want)
+    if confidence < 0.6:
+        print("Low confidence from AI. Pausing print for manual inspection.")
+        printer.pause_print()
+        return False
+    if recommended_action == "none":
+        print("Bed status OK. Continuing print.")
+        printer.resume_print()
+        return True
+    else:
+        print(f"Issue detected: {recommended_action}")
+        print("Pausing print until issue is resolved.")
+        printer.pause_print()
+        return False
 
 
 def first_layer_check(snapshot):
+    print("Starting first layer check")
     prompt_first = load_prompt("prompt_first_layer.txt")
-    analyze_snapshot(snapshot, prompt_first)
-    #if layer is not ok:
-    #...
-    #else ok continue
-    #print("Everything is fine, continue printing")
-    #printer.resume_print()
+    response_text = analyze_snapshot(snapshot, prompt_first)
+
+    if not response_text:
+        print("AI returned no response. Pausing print.")
+        printer.pause_print()
+        return False
+
+    ai_data = parse_ai_response(response_text)
+
+    print("\n--- Parsed AI JSON ---")
+    print(json.dumps(ai_data, indent=2))
+    print("-----------------------\n")
+
+    required_keys = ["print_status", "confidence_score", "recommended_adjustments"]
+    for key in required_keys:
+        if key not in ai_data:
+            print(f"Missing key: {key}")
+            printer.pause_print()
+            return False
+
+    status = ai_data["print_status"]
+    confidence = ai_data["confidence_score"]
+    adjustments = ai_data["recommended_adjustments"]
+    action = adjustments.get("action", "pause_print")
+
+    # This is safety logic, when AI is not really sure (change confidence as you want)
+    if confidence < 0.6:
+        print("Low confidence. Pausing for manual inspection.")
+        printer.pause_print()
+        return False
+
+    if status == "ok" and action == "none":
+        print("First layer OK. Continuing print.")
+        printer.resume_print()
+        return True
+
+    if status in ["warning", "ok"] and action == "pause_print":
+        print("Adjustments required. Pausing print.")
+        printer.pause_print()
+
+        apply_recommended_adjustments(adjustments) # Need to add command_printer commands
+
+        print("Resuming print after adjustments.")
+        printer.resume_print()
+        return True
+
+    if status == "critical" or action == "stop_print":
+        print("Critical issue detected.")
+        printer.stop_print()
+        print("Print stopped. Waiting for operator.")
+        return False
+
+    print("Unexpected AI output. Pausing for safety.")
+    printer.pause_print()
+    return False
 
 if __name__ == "__main__":
     total_layers = 200  # Total number of layers (simulation)
     current_layer = 0  # Current layer
-    milestones = [25, 50, 75]  # Multi-layer intervals
+    # change this for read_printer_status() - progress
 
+    milestones = [25, 50, 75]  # Multi-layer intervals
 
     test_file = "snapshot_20260211_123345_626856.jpg" #
 
