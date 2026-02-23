@@ -53,3 +53,67 @@ class PrinterControl:
         #Stops the print.
         return self.send_gcode("M112")  # M112 command stops the printer completely
 
+    def apply_recommended_adjustments(self, adjustments):
+        # Based on Klipper G-code manual
+        print("\nApplying recommended parameter adjustments via G-code...")
+
+        try:
+            # Wait for the movements to finish
+            self.send_gcode("M400")
+
+            # Nozzle temperature
+            nozzle_temp = adjustments.get("nozzle_temperature_c", 0)
+            if nozzle_temp > 0:
+                self.send_gcode(f"M104 S{nozzle_temp}")
+
+            # Bed temperature
+            bed_temp = adjustments.get("bed_temperature_c", 0)
+            if bed_temp > 0:
+                self.send_gcode(f"M140 S{bed_temp}")
+
+            # Flow
+            flow = adjustments.get("flow_multiplier_percent", 0)
+            if flow > 0:
+                self.send_gcode(f"M221 S{flow}")
+
+            # Print speed override
+            speed_percent = adjustments.get("print_speed_mm_per_s", 0)
+            if speed_percent > 0:
+                self.send_gcode(f"M220 S{speed_percent}")
+
+            # Acceleration
+            acceleration = adjustments.get("acceleration_mm_per_s2", 0)
+            if acceleration > 0:
+                self.send_gcode(f"M204 S{acceleration}")
+
+            # Fan
+            fan = adjustments.get("cooling_fan_percent", 0)
+            if fan > 0:
+                fan_value = int((fan / 100) * 255)
+                self.send_gcode(f"M106 S{fan_value}")
+
+            # Z offset
+            z_offset = adjustments.get("z_offset_mm", 0.0)
+            if z_offset != 0:
+                self.send_gcode("G91")
+                self.send_gcode(f"G1 Z{z_offset} F300")
+                self.send_gcode("G90")
+
+            # Action
+            action = adjustments.get("action", "none")
+
+            if action == "pause_print":
+                self.pause_print()
+
+            elif action == "stop_print":
+                self.send_gcode("M112")
+
+            # Wait
+            self.send_gcode("M400")
+
+            print("Adjustments applied successfully.")
+
+        except Exception as e:
+            print(f"Error while applying adjustments: {e}")
+            self.pause_print()
+

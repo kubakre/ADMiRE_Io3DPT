@@ -38,7 +38,7 @@ def load_prompt(name):
     except FileNotFoundError:
         print(f"Error: {name} not found.")
         return ""
-
+# It would probably be better to put it in command_printer.
 def get_printer_state():
     try:
         r = requests.get(f"{URL}/printer/info", timeout=3)
@@ -48,6 +48,7 @@ def get_printer_state():
         print(f"Printer not connected: {e}")
         return "error"
 
+# It would probably be better to put it in command_printer.
 def read_printer_status():
     objects = {
         "print_stats": None,
@@ -285,7 +286,7 @@ def first_layer_check(snapshot):
         print("Adjustments required. Pausing print.")
         printer.pause_print()
 
-        apply_recommended_adjustments(adjustments) # Need to add command_printer commands
+        printer.apply_recommended_adjustments(adjustments) # Need to add command_printer commands
 
         print("Resuming print after adjustments.")
         printer.resume_print()
@@ -301,9 +302,136 @@ def first_layer_check(snapshot):
     printer.pause_print()
     return False
 
+def mid_layer_check(snapshot):
+    global mid_layer_corrections_count
+
+    print("Mid-layer check")
+
+    prompt_mid = load_prompt("prompt_mid_print.txt")
+    response_text = analyze_snapshot(snapshot, prompt_mid)
+
+    if not response_text:
+        print("No AI response. Pausing print.")
+        printer.pause_print()
+        return False
+
+    ai_data = parse_ai_response(response_text)
+
+    print("\n--- Parsed AI JSON ---")
+    print(json.dumps(ai_data, indent=2))
+    print("-----------------------\n")
+
+    # Validation
+    required_keys = [
+        "print_status",
+        "current_layer_assessment",
+        "detected_issues",
+        "severity_score",
+        "confidence_score",
+        "recommended_adjustments"
+    ]
+
+    for key in required_keys:
+        if key not in ai_data:
+            print(f"Missing key: {key}")
+            printer.pause_print()
+            return False
+
+    status = ai_data["print_status"]
+    issues = ai_data["detected_issues"]
+    severity = ai_data["severity_score"]
+    confidence = ai_data["confidence_score"]
+    adjustments = ai_data["recommended_adjustments"]
+    action = adjustments.get("action", "pause_print")
+
+    # This is safety logic, when AI is not really sure (change confidence as you want)
+    if confidence < 0.6:
+        print("Low confidence. Pausing for manual inspection.")
+        printer.pause_print()
+        return False
+
+    # This will stop if there is no way to fix the error.
+    if "spaghetti_failure" in issues or "layer_shift" in issues:
+        print("Catastrophic failure detected.")
+        printer.stop_print()
+        return False
+
+    if status == "critical":
+        if action == "stop_print":
+            printer.stop_print()
+        else:
+            printer.pause_print()
+        return False
+
+    # If it's okay, don't interfere
+    if status == "ok" and action == "none":
+        print("Print stable. Continuing.")
+        return True
+
+    # Limit corrections, can be set in the main loop
+    if mid_layer_corrections_count >= MAX_AUTOMATIC_CORRECTIONS:
+        print("Maximum automatic corrections reached.")
+        printer.pause_print()
+        return False
+
+    # Slow down the print
+    if action == "slow_down":
+        printer.send_gcode("M220 S80")  # 80% speed override
+        mid_layer_corrections_count += 1
+        return True
+
+    # Adjustments
+    if action == "adjust_parameters" and status in ["warning", "ok"]:
+        print("Applying limited mid-layer adjustments.")
+
+        safe_adjustments = {}
+
+        # Permitted mid-layer modifications
+        for key in [
+            "flow_multiplier_percent",
+            "pressure_advance",
+            "retraction_length_mm",
+            "retraction_speed_mm_per_s",
+            "cooling_fan_percent",
+            "print_speed_mm_per_s",
+            "acceleration_mm_per_s2",
+            "square_corner_velocity_mm_per_s"
+        ]:
+            value = adjustments.get(key, "no_change")
+            if value != "no_change":
+                safe_adjustments[key] = value
+
+        # Safety temperature limit
+        nozzle_temp = adjustments.get("nozzle_temperature_c", "no_change")
+        if nozzle_temp != "no_change":
+            current_status = read_printer_status()
+            current_nozzle = current_status.get("extruder_temp", 0)
+
+            if abs(nozzle_temp - current_nozzle) <= 15:
+                safe_adjustments["nozzle_temperature_c"] = nozzle_temp
+            else:
+                print("Temperature change too large — ignored.")
+
+        printer.apply_recommended_adjustments(safe_adjustments)
+
+        mid_layer_corrections_count += 1
+        return True
+
+    # Pause
+    if action == "pause_print":
+        printer.pause_print()
+        return False
+
+    # ---- Fallback ----
+    print("Unexpected AI output. Pausing.")
+    printer.pause_print()
+    return False
+
 if __name__ == "__main__":
     total_layers = 200  # Total number of layers (simulation)
     current_layer = 0  # Current layer
+    MAX_AUTOMATIC_CORRECTIONS = 2
+    mid_layer_corrections_count = 0
     # change this for read_printer_status() - progress
 
     milestones = [25, 50, 75]  # Multi-layer intervals
@@ -311,39 +439,35 @@ if __name__ == "__main__":
     test_file = "snapshot_20260211_123345_626856.jpg" #
 
     # First layer check
-    current_layer = 1
+    current_layer = 1 # change (testing)
     if current_layer == 1:
         printer.pause_print()
         #printer.move_toolhead() #head home
         snapshot_path = get_test_snapshot_path(test_file)
         #snapshot_path = get_camera_snapshot()
         first_layer_check(snapshot_path)
-        current_layer = 50
+        progress = 25 # test
 
-    # ... Další logika pro zbytek tisku ...
+    # Multi - layer intervals
     while current_layer <= total_layers:
-        # 1. Výpočet aktuálního procenta
-        progress = int((current_layer / total_layers) * 100)
+        # read_printer_status()
 
-        # 2. LOGIKA KONTROLY
-        # Pokud seznam milníků není prázdný A aktuální procento je větší/rovno prvnímu milníku
+        # Based on milestones it begins control
         if len(milestones) > 0 and progress >= milestones[0]:
-            target = milestones.pop(0)  # Odstraní aktuální milník ze seznamu (už ho nechceme znovu)
+            target = milestones.pop(0)
 
-            print(f"\n🔔 DOSAŽENO {target}% -> SPOUŠTÍM KONTROLU...")
+            print(f"\n🔔 Milestone {target}% -> Starting check!")
 
-            # --- ZDE VLOŽÍŠ SVOU FUNKCI ---
-            prompt_mid = load_prompt("prompt_mid_print.txt")
-            result = analyze_snapshot(snapshot_path, prompt_mid)
-            # ------------------------------
+            # Logic
+            snapshot_path = get_test_snapshot_path(test_file)
+            mid_layer_check(snapshot_path)
 
-            time.sleep(1)  # Jen simulace času kontroly
-            print("✅ Kontrola OK, pokračuji v tisku.\n")
+            print("✅ Check ok, printing continues\n")
 
-        # 3. Výpis stavu a posun dál
-        print(f"\rTiskne se: {progress}% (Vrstva {current_layer})", end="")
+        print(f"\rPrinting: {progress}% (Layer {current_layer})", end="")
 
+        #simulation
         current_layer += 1
-        time.sleep(0.02)  # Rychlost simulace
+        time.sleep(0.02)
 
     print("100%: Printing complete!")
