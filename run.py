@@ -78,6 +78,25 @@ def read_printer_status():
         "position": status.get("toolhead", {}).get("position"),
     }
 
+def wait_for_print_start(poll_interval=2):
+    print("Waiting for print job to start...")
+
+    while True:
+        try:
+            status = read_printer_status()
+            state = status.get("state")
+
+            if state == "printing":
+                print("Print detected. Starting monitoring system.")
+                return True
+
+            print(f"Printer state: {state} | Waiting...")
+            time.sleep(poll_interval)
+
+        except Exception as e:
+            print(f"Error checking printer state: {e}")
+            time.sleep(poll_interval)
+
 def get_layer():
     try:
         #Must use Timelapse plugin in Klipper or find a different way
@@ -428,29 +447,46 @@ def mid_layer_check(snapshot):
     return False
 
 if __name__ == "__main__":
-    total_layers = 200  # Total number of layers (simulation)
-    current_layer = 0  # Current layer
     MAX_AUTOMATIC_CORRECTIONS = 2
     mid_layer_corrections_count = 0
     # change this for read_printer_status() - progress
 
     milestones = [25, 50, 75]  # Multi-layer intervals
 
-    test_file = "snapshot_20260211_123345_626856.jpg" #
+    print("=== 3D PRINT MONITOR STARTED ===")
 
-    # First layer check
-    current_layer = 1 # change (testing)
-    if current_layer == 1:
-        printer.pause_print()
-        #printer.move_toolhead() #head home
-        snapshot_path = get_test_snapshot_path(test_file)
-        #snapshot_path = get_camera_snapshot()
-        first_layer_check(snapshot_path)
-        progress = 25 # test
+    # Wait for print to start
+    wait_for_print_start()
+
+    first_layer_done = False
 
     # Multi - layer intervals
-    while current_layer <= total_layers:
+    while True:
+        status = read_printer_status()
+        state = status.get("state")
+
+        # If print ends -> exit monitoring
+        if state in ["complete", "error", "standby"]:
+            print(f"\nPrint finished with state: {state}")
+            break
+
+        # If paused -> wait
+        if state == "paused":
+            print("\nPrint paused...")
+            time.sleep(2)
+            continue
+
         # read_printer_status()
+        progress = int(status.get("progress", 0) * 100)
+
+        # First layer check
+        if not first_layer_done and progress >= 1:
+            print("\n🔎 First layer check starting...")
+            printer.pause_print()
+            snapshot_path = get_camera_snapshot()
+            first_layer_check(snapshot_path)
+            first_layer_done = True
+            print("First layer check completed.\n")
 
         # Based on milestones it begins control
         if len(milestones) > 0 and progress >= milestones[0]:
@@ -459,15 +495,13 @@ if __name__ == "__main__":
             print(f"\n🔔 Milestone {target}% -> Starting check!")
 
             # Logic
-            snapshot_path = get_test_snapshot_path(test_file)
+            snapshot_path = get_camera_snapshot()
             mid_layer_check(snapshot_path)
 
             print("✅ Check ok, printing continues\n")
 
-        print(f"\rPrinting: {progress}% (Layer {current_layer})", end="")
+        print(f"\rPrinting: {progress}%", end="")
 
-        #simulation
-        current_layer += 1
-        time.sleep(0.02)
+        time.sleep(2)  # polling interval
 
     print("100%: Printing complete!")
