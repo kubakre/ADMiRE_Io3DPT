@@ -1,45 +1,35 @@
-import pyrealsense2 as rs
 import numpy as np
 import cv2
 import os
+import requests
 from datetime import datetime
 
-
 class RealSenseCamera:
-    def __init__(self, serial=None):
-        self.pipeline = rs.pipeline()
-        self.config = rs.config()
-
-        if serial:
-            self.config.enable_device(serial)
-
-        self.config.enable_stream(
-            rs.stream.color, 1920, 1080, rs.format.bgr8, 30
-        )
-
-        self.pipeline_started = False
+    # Kept the original class name so the main script doesn't need to be changed.
+    # It now uses Klipper's camera API (Crowsnest) instead of a physical RealSense connection.
+    def __init__(self, snapshot_url="http://localhost:8080/?action=snapshot"):
+        self.snapshot_url = snapshot_url
 
     def start(self):
-        if not self.pipeline_started:
-            self.pipeline.start(self.config)
-            for _ in range(10):
-                self.pipeline.wait_for_frames()
-            self.pipeline_started = True
+        # This method is no longer needed, Klipper's camera API is always running.
+        pass
 
     def get_snapshot(self):
         # Returns a numpy array (image) or None
         try:
-            if not self.pipeline_started:
-                self.start()
+            # Download the current snapshot from Klipper's web UI (Crowsnest)
+            response = requests.get(self.snapshot_url, timeout=5)
+            response.raise_for_status()
 
-            frames = self.pipeline.wait_for_frames(timeout_ms=2000)
-            color_frame = frames.get_color_frame()
-            if not color_frame:
+            # Convert the downloaded byte data into a numpy array and decode into an OpenCV image
+            image_array = np.asarray(bytearray(response.content), dtype=np.uint8)
+            image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+
+            if image is None:
                 return None
 
-            image = np.asanyarray(color_frame.get_data())
-
             # Crop the snapshot (based on the camera position, you need to measure it. You can use snapshot_crop).
+            # Make sure your Klipper camera is set to output 1920x1080, otherwise adjust these values.
             Y_START = 0
             Y_END = 930
             X_START = 570
@@ -68,6 +58,5 @@ class RealSenseCamera:
         return path
 
     def stop(self):
-        if self.pipeline_started:
-            self.pipeline.stop()
-            self.pipeline_started = False
+        # Nothing to stop.
+        pass
