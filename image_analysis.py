@@ -52,7 +52,7 @@ class SnapshotAnalysis:
             raise ValueError("No AI model loaded. Please load a model first.")
 
         #Image preporcessing
-        image_resized = cv2.resize(self.image, (224, 224))
+        image_resized = cv2.resize(self.image, (224, 224)) # based on the position of the camera
         image_normalized = image_resized / 255.0
 
         #Prediction

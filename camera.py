@@ -39,7 +39,7 @@ class RealSenseCamera:
 
             image = np.asanyarray(color_frame.get_data())
 
-            # Crop the snapshot (based on the camera position, you need to measure it. You can use snapshot_crop)
+            # Crop the snapshot (based on the camera position, you need to measure it. You can use snapshot_crop).
             Y_START = 0
             Y_END = 930
             X_START = 570
