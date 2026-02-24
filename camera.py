@@ -4,6 +4,7 @@ import cv2
 import os
 from datetime import datetime
 
+
 class RealSenseCamera:
     def __init__(self, serial=None):
         self.pipeline = rs.pipeline()
@@ -13,7 +14,7 @@ class RealSenseCamera:
             self.config.enable_device(serial)
 
         self.config.enable_stream(
-            rs.stream.color, 640, 480, rs.format.bgr8, 30
+            rs.stream.color, 1920, 1080, rs.format.bgr8, 30
         )
 
         self.pipeline_started = False
@@ -26,7 +27,7 @@ class RealSenseCamera:
             self.pipeline_started = True
 
     def get_snapshot(self):
-        #Returns a numpy array (image) or None
+        # Returns a numpy array (image) or None
         try:
             if not self.pipeline_started:
                 self.start()
@@ -36,14 +37,24 @@ class RealSenseCamera:
             if not color_frame:
                 return None
 
-            return np.asanyarray(color_frame.get_data())
+            image = np.asanyarray(color_frame.get_data())
+
+            # Crop the snapshot
+            Y_START = 0
+            Y_END = 930
+            X_START = 570
+            X_END = 1520
+
+            cropped_image = image[Y_START:Y_END, X_START:X_END]
+
+            return cropped_image
 
         except Exception as e:
             print("Camera get_snapshot error:", e)
             return None
 
     def save_snapshot(self, base_dir="Snapshot"):
-        #Saves snapshot to disk.
+        # Saves snapshot to disk.
         image = self.get_snapshot()
         if image is None:
             return None
