@@ -1,0 +1,6 @@
+requests
+openai
+python-dotenv
+opencv-python
+numpy
+tensorflow
