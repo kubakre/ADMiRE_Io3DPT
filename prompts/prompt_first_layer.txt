@@ -7,6 +7,7 @@ Please analyze the attached photo of the 3D print.
 5) Do NOT return parameter ranges. Return exact numeric values.
 6) If a parameter does not need modification, return "no_change" as its value.
 7) All numeric values must be realistic for a standard FDM 3D printer.
+8) Suggested adjustments must be conservative and corrective. Do not propose aggressive or large changes. All parameter modifications should represent fine-tuning rather than major reconfiguration of the printer. Assume the printer is generally well calibrated.
 
 Return the output in the following JSON structure:
 
@@ -47,3 +48,13 @@ Rules:
 - If no adjustment is needed, return "no_change" for that parameter.
 - confidence_score must be between 0.0 and 1.0.
 - The output must be pure JSON without commentary.
+Adjustment Constraints:
+- Flow multiplier change must not exceed ±5%.
+- Nozzle temperature change must not exceed ±10°C.
+- Bed temperature change must not exceed ±10°C.
+- Print speed change must not exceed ±20%.
+- Acceleration change must not exceed ±30%.
+- Z-offset correction must not exceed ±0.05 mm.
+- Retraction length change must not exceed ±1 mm.
+- Cooling fan adjustment must not exceed ±20%.
+- Pressure advance change must not exceed ±0.03.

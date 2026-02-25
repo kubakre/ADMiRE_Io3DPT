@@ -13,6 +13,8 @@ Your task:
 7) If a parameter does not require modification, return "no_change".
 8) All numeric values must be realistic for a standard FDM 3D printer.
 9) Assume a typical 0.4 mm nozzle unless clearly indicated otherwise.
+10) Suggested adjustments must be conservative and corrective. Do not propose aggressive or large changes. All parameter modifications should represent fine-tuning rather than major reconfiguration of the printer. Assume the printer is generally well calibrated.
+
 
 Return output strictly in this JSON structure:
 
@@ -59,3 +61,13 @@ Rules:
 - If no adjustment is needed, return "no_change".
 - If a catastrophic failure (e.g. spaghetti failure or layer shift) is detected, set action to "pause_print" or "stop_print".
 - Output must be pure JSON only.
+Adjustment Constraints:
+- Flow multiplier change must not exceed ±5%.
+- Nozzle temperature change must not exceed ±10°C.
+- Bed temperature change must not exceed ±10°C.
+- Print speed change must not exceed ±20%.
+- Acceleration change must not exceed ±30%.
+- Z-offset correction must not exceed ±0.05 mm.
+- Retraction length change must not exceed ±1 mm.
+- Cooling fan adjustment must not exceed ±20%.
+- Pressure advance change must not exceed ±0.03.
