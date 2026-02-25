@@ -29,5 +29,7 @@ This architecture bridges the gap by providing zero-shot reasoning capabilities 
 ### Prerequisites
 1. Ensure your 3D printer is correctly set up with **Klipper** and **Moonraker** and **Mainsail**
 2. Obtain an API key from [OpenAI](https://platform.openai.com/).
-3. Implement the code on your Raspberry Pi and ensure that the run.py code runs when the device is turned on. 
-4. Print
+3. Implement the code on your Raspberry Pi and ensure that the run.py code runs when the device is turned on.
+4. Install requirements.txt.
+5. Crop the snapshot from your camera to fit your printing bed.
+6. Print
