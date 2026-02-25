@@ -41,12 +41,25 @@ def load_prompt(name):
 # It would probably be better to put it in command_printer.
 def get_printer_state():
     try:
-        r = requests.get(f"{URL}/printer/info", timeout=3)
+        query_url = f"{URL}/printer/objects/query?print_stats&virtual_sdcard&extruder&heater_bed&toolhead"
+        r = requests.get(query_url, timeout=3)
         r.raise_for_status()
-        return r.json()["result"]["state"]
-    except requests.RequestException as e:
-        print(f"Printer not connected: {e}")
-        return "error"
+
+        status = r.json().get("result", {}).get("status", {})
+
+        return {
+            "state": status.get("print_stats", {}).get("state", "standby"),  # Změněn default na standby
+            "filename": status.get("print_stats", {}).get("filename"),
+            "progress": status.get("virtual_sdcard", {}).get("progress", 0),
+            "extruder_temp": status.get("extruder", {}).get("temperature", 0),
+            "extruder_target": status.get("extruder", {}).get("target", 0),
+            "bed_temp": status.get("heater_bed", {}).get("temperature", 0),
+            "bed_target": status.get("heater_bed", {}).get("target", 0),
+            "position": status.get("toolhead", {}).get("position", [0, 0, 0]),
+        }
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"state": "error"}
 
 # It would probably be better to put it in command_printer.
 def read_printer_status():
@@ -99,12 +112,10 @@ def wait_for_print_start(poll_interval=2):
 
 def get_layer():
     try:
-        #Must use Timelapse plugin in Klipper or find a different way
-        #Can I get that from initial data?
-        response = requests.get(f"{URL}/printer/objects/query?objects={{'timelapse': null}}")
-        response.raise_for_status()
+        r = requests.get(f"{URL}/printer/objects/query?timelapse", timeout=3)
+        r.raise_for_status()
 
-        data = response.json()
+        data = r.json()
         layer = data.get("result", {}).get("status", {}).get("timelapse", {}).get("current_layer", None)
 
         return layer
