@@ -124,12 +124,12 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
-def analyze_snapshot(image_path, prompt_text):
+def analyze_snapshot(image_path, prompt_text, current_telemetry):
     if not image_path or not os.path.exists(image_path):
         print("Error: There is no snapshot to analyze.")
         return
 
-    printer_status = read_printer_status()
+    #printer_status = read_printer_status()
 
     # This is for local analysis
     # try:
@@ -144,7 +144,7 @@ def analyze_snapshot(image_path, prompt_text):
     base64_image = encode_image(image_path)
 
     structured_context = {
-        "printer_status": printer_status
+        "printer_status": current_telemetry
     }
 
     combined_prompt = f"""
@@ -262,10 +262,10 @@ def zero_layer_check(snapshot):
         return False
 
 
-def first_layer_check(snapshot):
+def first_layer_check(snapshot, telemetry):
     print("Starting first layer check")
     prompt_first = load_prompt("prompt_first_layer.txt")
-    response_text = analyze_snapshot(snapshot, prompt_first)
+    response_text = analyze_snapshot(snapshot, prompt_first, telemetry)
 
     if not response_text:
         print("AI returned no response. Pausing print.")
@@ -321,13 +321,13 @@ def first_layer_check(snapshot):
     printer.pause_print()
     return False
 
-def mid_layer_check(snapshot):
+def mid_layer_check(snapshot, telemetry):
     global mid_layer_corrections_count
 
     print("Mid-layer check")
 
     prompt_mid = load_prompt("prompt_mid_print.txt")
-    response_text = analyze_snapshot(snapshot, prompt_mid)
+    response_text = analyze_snapshot(snapshot, prompt_mid, telemetry)
 
     if not response_text:
         print("No AI response. Pausing print.")
@@ -482,10 +482,11 @@ if __name__ == "__main__":
         # First layer check
         if not first_layer_done and progress >= 1:
             print("\n🔎 First layer check starting...")
+            active_telemetry = read_printer_status()
             printer.pause_print()
             printer.home()
             snapshot_path = get_camera_snapshot()
-            first_layer_check(snapshot_path)
+            first_layer_check(snapshot_path, active_telemetry)
             first_layer_done = True
             print("First layer check completed.\n")
 
@@ -496,10 +497,11 @@ if __name__ == "__main__":
             print(f"\n🔔 Milestone {target}% -> Starting check!")
 
             # Logic
+            active_telemetry = read_printer_status()
             printer.pause_print()
             printer.home()
             snapshot_path = get_camera_snapshot()
-            mid_layer_check(snapshot_path)
+            mid_layer_check(snapshot_path, active_telemetry)
 
             print("✅ Check ok, printing continues\n")
 
