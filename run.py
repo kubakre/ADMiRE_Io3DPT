@@ -6,7 +6,7 @@ import base64
 
 from camera import RealSenseCamera
 from command_printer import PrinterControl
-from image_analysis import SnapshotAnalysis
+from image_analysis import SnapshotAnalysis #can be deleted
 from datetime import datetime
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -483,6 +483,7 @@ if __name__ == "__main__":
         if not first_layer_done and progress >= 1:
             print("\n🔎 First layer check starting...")
             printer.pause_print()
+            printer.home()
             snapshot_path = get_camera_snapshot()
             first_layer_check(snapshot_path)
             first_layer_done = True
@@ -495,6 +496,8 @@ if __name__ == "__main__":
             print(f"\n🔔 Milestone {target}% -> Starting check!")
 
             # Logic
+            printer.pause_print()
+            printer.home()
             snapshot_path = get_camera_snapshot()
             mid_layer_check(snapshot_path)
 

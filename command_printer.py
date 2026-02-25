@@ -20,13 +20,17 @@ class PrinterControl:
 
     def set_extruder_temp(self, target_temp):
         #Sets the extruder temperature.
-        gcode = f"M104 S{target_temp}"  # M104 command for setting extruder temperature
+        gcode = f"M104 S{target_temp}"  # M104 command for setting extruder temperature, maybe use M109
         return self.send_gcode(gcode)
 
     def set_bed_temp(self, target_temp):
         #Sets the bed temperature.
-        gcode = f"M140 S{target_temp}"  # M140 command for setting bed temperature
+        gcode = f"M140 S{target_temp}"  # M140 command for setting bed temperature, maybe use M190
         return self.send_gcode(gcode)
+
+    def home(self):
+        # headhome
+        return self.send_gcode("G28")
 
     def move_toolhead(self, x=None, y=None, z=None, feedrate=1500):
         #Moves the toolhead to specified coordinates.
