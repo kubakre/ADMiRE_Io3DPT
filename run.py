@@ -18,7 +18,7 @@ if not OPENAI_API_KEY:
     raise ValueError("Missing OpenAI API key.")
 
 # Configuration Klipper/Moonraker
-IP_ADDRESS = "localhost"
+IP_ADDRESS = "192.168.137.84"
 PORT = "7125"
 URL = f"http://{IP_ADDRESS}:{PORT}"
 
