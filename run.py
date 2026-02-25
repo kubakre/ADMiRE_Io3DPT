@@ -41,6 +41,16 @@ def load_prompt(name):
 # It would probably be better to put it in command_printer.
 def get_printer_state():
     try:
+        r = requests.get(f"{URL}/printer/info", timeout=3)
+        r.raise_for_status()
+        return r.json()["result"]["state"]
+    except requests.RequestException as e:
+        print(f"Printer not connected: {e}")
+        return "error"
+
+# It would probably be better to put it in command_printer.
+def read_printer_status():
+    try:
         query_url = f"{URL}/printer/objects/query?print_stats&virtual_sdcard&extruder&heater_bed&toolhead"
         r = requests.get(query_url, timeout=3)
         r.raise_for_status()
@@ -48,7 +58,7 @@ def get_printer_state():
         status = r.json().get("result", {}).get("status", {})
 
         return {
-            "state": status.get("print_stats", {}).get("state", "standby"),  # Změněn default na standby
+            "state": status.get("print_stats", {}).get("state", "standby"), # Změněn default na standby
             "filename": status.get("print_stats", {}).get("filename"),
             "progress": status.get("virtual_sdcard", {}).get("progress", 0),
             "extruder_temp": status.get("extruder", {}).get("temperature", 0),
@@ -60,36 +70,6 @@ def get_printer_state():
     except Exception as e:
         print(f"Error: {e}")
         return {"state": "error"}
-
-# It would probably be better to put it in command_printer.
-def read_printer_status():
-    objects = {
-        "print_stats": None,
-        "virtual_sdcard": None,
-        "extruder": None,
-        "heater_bed": None,
-        "toolhead": None
-    }
-
-    r = requests.get(
-        f"{URL}/printer/objects/query",
-        params={"objects": json.dumps(objects, separators=(",", ":"))},
-        timeout=3
-    )
-    r.raise_for_status()
-
-    status = r.json().get("result", {}).get("status", {})
-
-    return {
-        "state": status.get("print_stats", {}).get("state", "idle"),
-        "filename": status.get("print_stats", {}).get("filename"),
-        "progress": status.get("virtual_sdcard", {}).get("progress"),
-        "extruder_temp": status.get("extruder", {}).get("temperature"),
-        "extruder_target": status.get("extruder", {}).get("target"),
-        "bed_temp": status.get("heater_bed", {}).get("temperature"),
-        "bed_target": status.get("heater_bed", {}).get("target"),
-        "position": status.get("toolhead", {}).get("position"),
-    }
 
 def wait_for_print_start(poll_interval=2):
     print("Waiting for print job to start...")
