@@ -6,7 +6,7 @@ from datetime import datetime
 
 class RealSenseCamera:
     # Initialize local USB camera instead of network stream
-    def __init__(self, camera_index=0):
+    def __init__(self, camera_index=4):
         self.camera_index = camera_index
 
     def start(self):
