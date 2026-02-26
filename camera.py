@@ -1,50 +1,52 @@
-import numpy as np
 import cv2
+import numpy as np
 import os
-import requests
 from datetime import datetime
 
+
 class RealSenseCamera:
-    # Kept the original class name so the main script doesn't need to be changed.
-    # It now uses Klipper's camera API (Crowsnest) instead of a physical RealSense connection.
-    def __init__(self, snapshot_url="http://localhost:8080/?action=snapshot"):
-        self.snapshot_url = snapshot_url
+    # Initialize local USB camera instead of network stream
+    def __init__(self, camera_index=0):
+        self.camera_index = camera_index
 
     def start(self):
-        # This method is no longer needed, Klipper's camera API is always running.
         pass
 
     def get_snapshot(self):
-        # Returns a numpy array (image) or None
         try:
-            # Download the current snapshot from Klipper's web UI (Crowsnest)
-            response = requests.get(self.snapshot_url, timeout=5)
-            response.raise_for_status()
+            # Connecting
+            cap = cv2.VideoCapture(self.camera_index)
 
-            # Convert the downloaded byte data into a numpy array and decode into an OpenCV image
-            image_array = np.asarray(bytearray(response.content), dtype=np.uint8)
-            image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
-            if image is None:
+            ret, frame = cap.read()
+
+            cap.release()
+
+            if not ret or frame is None:
+                print("Kamera nevrátila žádný obraz. Zkontroluj zapojení USB.")
                 return None
 
-            # Crop the snapshot (based on the camera position, you need to measure it. You can use snapshot_crop).
-            # Make sure your Klipper camera is set to output 1920x1080, otherwise adjust these values.
+            # Crop
             Y_START = 0
             Y_END = 930
             X_START = 570
             X_END = 1520
 
-            cropped_image = image[Y_START:Y_END, X_START:X_END]
+            h, w = frame.shape[:2]
+            y2 = min(Y_END, h)
+            x2 = min(X_END, w)
+
+            cropped_image = frame[Y_START:y2, X_START:x2]
 
             return cropped_image
 
         except Exception as e:
-            print("Camera get_snapshot error:", e)
+            print(f"Camera get_snapshot error: {e}")
             return None
 
     def save_snapshot(self, base_dir="Snapshot"):
-        # Saves snapshot to disk.
         image = self.get_snapshot()
         if image is None:
             return None
@@ -58,5 +60,4 @@ class RealSenseCamera:
         return path
 
     def stop(self):
-        # Nothing to stop.
         pass
