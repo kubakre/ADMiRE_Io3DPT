@@ -14,6 +14,8 @@ Your task:
 8) All numeric values must be realistic for a standard FDM 3D printer.
 9) Assume a typical 0.4 mm nozzle unless clearly indicated otherwise.
 10) Suggested adjustments must be conservative and corrective. Do not propose aggressive or large changes. All parameter modifications should represent fine-tuning rather than major reconfiguration of the printer. Assume the printer is generally well calibrated.
+11) If "print_status" is not "ok", the "action" field MUST NOT be "none". It must be either "pause_print" or "stop_print".
+
 
 
 Return output strictly in this JSON structure:

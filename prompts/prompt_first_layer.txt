@@ -8,6 +8,8 @@ Please analyze the attached photo of the 3D print.
 6) If a parameter does not need modification, return "no_change" as its value.
 7) All numeric values must be realistic for a standard FDM 3D printer.
 8) Suggested adjustments must be conservative and corrective. Do not propose aggressive or large changes. All parameter modifications should represent fine-tuning rather than major reconfiguration of the printer. Assume the printer is generally well calibrated.
+9) If "print_status" is not "ok", the "action" field MUST NOT be "none". It must be either "pause_print" or "stop_print".
+
 
 Return the output in the following JSON structure:
 
