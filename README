@@ -20,7 +20,7 @@ This architecture bridges the gap by providing zero-shot reasoning capabilities 
 * **Camera:** Intel RealSense D435 or standard high-resolution RGB cam.
 
 ### Software Requirements
-* **Firmware/API:** Klipper + Moonraker API + Mainsail
+* **Firmware/API:** Klipper + Moonraker API + Mainsail (use KIAUH https://github.com/dw-0/kiauh)
 * **Language:** Python 3.9+
 * **AI Model:** OpenAI API (GPT-4o)
 
