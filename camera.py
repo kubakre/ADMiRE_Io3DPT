@@ -25,7 +25,7 @@ class RealSenseCamera:
             cap.release()
 
             if not ret or frame is None:
-                print("Kamera nevrátila žádný obraz. Zkontroluj zapojení USB.")
+                print("Cannot connect to the camera.")
                 return None
 
             # Crop

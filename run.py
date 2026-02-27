@@ -6,6 +6,7 @@ import base64
 
 from camera import RealSenseCamera
 from command_printer import PrinterControl
+from logger import PrintLogger
 from image_analysis import SnapshotAnalysis #can be deleted
 from datetime import datetime
 from openai import OpenAI
@@ -27,6 +28,7 @@ camera = RealSenseCamera()
 printer = PrinterControl(URL)
 client = OpenAI(api_key=OPENAI_API_KEY)
 Baseline_printer_status = None
+db_logger = PrintLogger()
 
 def load_prompt(name):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -326,6 +328,7 @@ def mid_layer_check(snapshot, telemetry):
         return False
 
     ai_data = parse_ai_response(response_text)
+    printer_status = read_printer_status()
 
     print("\n--- Parsed AI JSON ---")
     print(json.dumps(ai_data, indent=2))
@@ -357,12 +360,14 @@ def mid_layer_check(snapshot, telemetry):
     # This is safety logic, when AI is not really sure (change confidence as you want)
     if confidence < 0.6:
         print("Low confidence. Pausing for manual inspection.")
+        db_logger.log_check("mid_layer", printer_status, ai_data, "paused_low_confidence")
         printer.pause_print()
         return False
 
     # This will stop if there is no way to fix the error.
     if "spaghetti_failure" in issues or "layer_shift" in issues:
         print("Catastrophic failure detected.")
+        db_logger.log_check("mid_layer", printer_status, ai_data, "stopped_catastrophic")
         printer.stop_print()
         return False
 
@@ -376,6 +381,7 @@ def mid_layer_check(snapshot, telemetry):
     # If it's okay, don't interfere
     if status == "ok" and action == "none":
         print("Print stable. Continuing.")
+        db_logger.log_check("mid_layer", printer_status, ai_data, "none")
         return True
 
     # Limit corrections, can be set in the main loop
