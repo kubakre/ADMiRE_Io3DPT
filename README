@@ -1,35 +1,43 @@
-# Autonomous LLM-Driven Closed-Loop 3D Printing Control
-
-## 📌 About The Project
-
+Autonomous LLM-Driven Closed-Loop 3D Printing Control
+About The Project
 This project implements an autonomous closed-loop control system for Material Extrusion (MEX/FDM) 3D printers. By capturing spatial and visual data of individual printing layers, the system uses Vision-Language Models (VLMs) like GPT-4o to evaluate print quality in real-time. If defects such as warping, stringing, or inconsistent extrusion are detected, the system dynamically adjusts printing parameters (e.g., flow rate, speed, temperature, Z-offset) via the Moonraker API.
 
 This architecture bridges the gap by providing zero-shot reasoning capabilities to diagnose and deploy immediate corrective actions without the need for extensive dataset-dependent Deep Learning model fine-tuning.
 
-### ✨ Key Features
-* **Real-time Defect Detection:** Layer-by-layer (or intermittent) visual inspection to catch stringing, warping, and under/over-extrusion.
-* **Autonomous Parameter Adjustment:** Dynamically modifies print speed, extrusion multiplier, and temperatures via JSON-structured API commands.
-* **Sensor-Agnostic AI Reasoning:** Utilizes VLMs (GPT-4o) for high-tier reasoning and contextual understanding of print anomalies.
-* **Security Whitelist:** Implements a strict JSON parsing and security whitelist to prevent the AI from executing dangerous commands or halting the printer entirely.
+Key Features
+Real-time Defect Detection: Layer-by-layer (or intermittent) visual inspection to catch stringing, warping, and under/over-extrusion.
 
-## 🛠 Hardware & Software Stack
+Autonomous Parameter Adjustment: Dynamically modifies print speed, extrusion multiplier, and temperatures via JSON-structured API commands.
 
-### Hardware Requirements
-* **3D Printer:** Any FDM/MEX printer running Klipper firmware.
-* **Host Machine:** Raspberry Pi 4 or different version.
-* **Camera:** Intel RealSense D435 or standard high-resolution RGB cam.
+Sensor-Agnostic AI Reasoning: Utilizes VLMs (GPT-4o) for high-tier reasoning and contextual understanding of print anomalies.
 
-### Software Requirements
-* **Firmware/API:** Klipper + Moonraker API + Mainsail (use KIAUH https://github.com/dw-0/kiauh)
-* **Language:** Python 3.9+
-* **AI Model:** OpenAI API (GPT-4o)
+Security Whitelist: Implements a strict JSON parsing and security whitelist to prevent the AI from executing dangerous commands or halting the printer entirely.
 
-## 🚀 Getting Started
+Hardware & Software Stack
+Hardware Requirements
+3D Printer: Any FDM/MEX printer running Klipper firmware.
 
-### Prerequisites
-1. Ensure your 3D printer is correctly set up with **Klipper** and **Moonraker** and **Mainsail**
-2. Obtain an API key from [OpenAI](https://platform.openai.com/).
-3. Implement the code on your Raspberry Pi and ensure that the run.py code runs when the device is turned on.
-4. Install requirements.txt.
-5. Crop the snapshot from your camera to fit your printing bed.
-6. Print
+Host Machine: Raspberry Pi 4 or different version.
+
+Camera: Intel RealSense D435 or standard high-resolution RGB cam.
+
+Software Requirements
+Firmware/API: Klipper + Moonraker API + Mainsail (use KIAUH https://github.com/dw-0/kiauh)
+
+Language: Python 3.9+
+
+AI Model: OpenAI API (GPT-4o)
+
+Getting Started
+Prerequisites
+Ensure your 3D printer is correctly set up with Klipper, Moonraker, and Mainsail.
+
+Obtain an API key from OpenAI.
+
+Implement the code on your Raspberry Pi and ensure that the run.py script executes upon device startup.
+
+Install dependencies via requirements.txt.
+
+Crop the snapshot from your camera to precisely fit your printing bed.
+
+Start printing.
